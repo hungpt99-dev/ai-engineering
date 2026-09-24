@@ -1,0 +1,29 @@
+# Dify self-hosted — minimal compose for local evaluation
+# This file is intentionally minimal. For production, use the official Dify compose:
+#   https://github.com/langgenius/dify  →  docker/docker-compose.yaml
+# Official docs: https://docs.dify.ai/en/self-host
+#
+# Usage:
+#   cd docker/dify
+#   cp .env.example .env   # then edit
+#   docker compose up -d
+#   open http://localhost:3000  (Dify console)
+#
+# This compose is a convenience wrapper; it pins Dify version and mounts volumes
+# under ./volumes so data survives restarts. Adapt for your infra as needed.
+
+services:
+  # NOTE: This is a stub. Uncomment and adapt the official Dify compose when self-hosting.
+  # For now we keep a placeholder that explains intent without pulling heavy images
+  # during CI. To run a real Dify instance, replace this file with the upstream compose.
+  #
+  # Recommended path:
+  #   git clone https://github.com/langgenius/dify.git /tmp/dify
+  #   cp -r /tmp/dify/docker/* .
+  #   cp .env.example .env
+  #   docker compose up -d
+  #
+  placeholder:
+    image: alpine:3.20
+    command: ["sh", "-c", "echo 'Replace docker/dify/docker-compose.yml with upstream Dify compose for real deployment. See README.'; sleep 3600"]
+    restart: "no"

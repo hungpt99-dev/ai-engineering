@@ -1,0 +1,12 @@
+{
+  "_comment": "Paste this snippet into opencode.json > mcp.dify-knowledge. Requires mcp/dify-knowledge built (npm run build).",
+  "dify-knowledge": {
+    "type": "local",
+    "command": ["node", "mcp/dify-knowledge/dist/index.js"],
+    "environment": {
+      "DIFY_BASE_URL": "{env:DIFY_BASE_URL}",
+      "DIFY_API_KEY": "{env:DIFY_API_KEY}"
+    },
+    "enabled": true
+  }
+}

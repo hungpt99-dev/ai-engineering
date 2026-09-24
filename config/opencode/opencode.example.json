@@ -1,0 +1,77 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "_comment": "Example project-level opencode.json. Copy to opencode.json and adjust. Verified against OpenCode config schema 2026-09.",
+  "model": "{env:OPENCODE_MODEL}",
+  "small_model": "{env:OPENCODE_SMALL_MODEL}",
+  "plugin": ["oh-my-openagent"],
+  "instructions": ["AGENTS.md"],
+  "mcp": {
+    "dify-knowledge": {
+      "type": "local",
+      "command": ["node", "mcp/dify-knowledge/dist/index.js"],
+      "environment": {
+        "DIFY_BASE_URL": "{env:DIFY_BASE_URL}",
+        "DIFY_API_KEY": "{env:DIFY_API_KEY}"
+      },
+      "enabled": true
+    },
+    "redmine": {
+      "type": "local",
+      "command": ["npx", "-y", "@onozaty/redmine-mcp-server"],
+      "environment": {
+        "REDMINE_URL": "{env:REDMINE_URL}",
+        "REDMINE_API_KEY": "{env:REDMINE_API_KEY}",
+        "REDMINE_MCP_READ_ONLY": "{env:REDMINE_MCP_READ_ONLY}"
+      },
+      "enabled": true
+    }
+  },
+  "permission": {
+    "skill": {
+      "*": "allow"
+    }
+  },
+  "agent": {
+    "developer": {
+      "description": "Implements features, fixes bugs, refactors code. Full edit+bash access with guardrails.",
+      "mode": "primary",
+      "prompt": "{file:.opencode/agents/developer.md}",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "skill": "allow"
+      }
+    },
+    "researcher": {
+      "description": "Read-only codebase and knowledge researcher. Never modifies files.",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/researcher.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "git status": "allow",
+          "git log*": "allow",
+          "git diff*": "allow",
+          "git branch*": "allow"
+        },
+        "skill": "allow"
+      }
+    },
+    "reviewer": {
+      "description": "Read-only code reviewer for correctness, security, performance, and maintainability.",
+      "mode": "subagent",
+      "prompt": "{file:.opencode/agents/reviewer.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git status": "allow"
+        },
+        "skill": "allow"
+      }
+    }
+  }
+}

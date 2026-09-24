@@ -1,0 +1,55 @@
+# Environment & secrets
+.env
+.env.local
+*.env
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+dist/
+build/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OpenCode local overrides (do not commit secrets)
+.opencode.local/
+opencode.local.json
+
+# MCP auth tokens
+.mcp-auth.json
+**/mcp-auth.json
+
+# Logs
+logs/
+*.log
+
+# Dify
+docker/dify/.env
+docker/dify/volumes/
+docker/dify/data/
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Bun
+bun.lockb
