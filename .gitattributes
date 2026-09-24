@@ -1,0 +1,11 @@
+# Enforce LF for shell scripts and JS, CRLF for PowerShell on Windows
+*.sh text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+*.toml text eol=lf
+# Binary
+*.png binary
+*.jpg binary
