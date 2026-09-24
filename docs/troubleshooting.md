@@ -104,6 +104,56 @@ Fix every `FAIL` before starting OpenCode. `WARN` is often actionable (missing o
 
 - User lacks permission for that project/issue. Check Redmine roles.
 
+## Jira MCP
+
+### `401 Unauthorized (Jira)`
+
+- `JIRA_EMAIL` / `JIRA_API_TOKEN` wrong. Cloud: `id.atlassian.com` → Security → Create API token. Data Center: `JIRA_TOKEN` (PAT) or `npx @atlassian-dc-mcp/jira setup` writes `~/.atlassian-dc-mcp/jira.env`.
+
+### `JIRA_BASE_URL` 404
+
+- Cloud: `https://your-domain.atlassian.net` (no trailing slash, no `/rest`). Data Center: `JIRA_HOST=jira.example.com` (domain only) or `JIRA_API_BASE_PATH=https://jira.example.com/rest`.
+
+### `jira-mcp-server` not found / npx 404
+
+- Package is `@ahmetbarut/jira-mcp-server` (Cloud, this repo default). Data Center uses `@atlassian-dc-mcp/jira`. Check `npx -y @ahmetbarut/jira-mcp-server --help`.
+
+### Jira connectivity: 401/403 in `setup/check`
+
+- Cloud test is `GET /rest/api/3/myself` with Basic `JIRA_EMAIL:JIRA_API_TOKEN`. Ensure email matches token owner and site URL correct.
+
+## Hosts — Claude Code / Codex
+
+### `claude: command not found` / `codex: command not found`
+
+- Install: `npm install -g @anthropic-ai/claude-code` / `npm install -g @openai/codex`. Check `claude --version` / `codex --version`. Reopen terminal.
+
+### Claude `claude mcp list` shows disconnected
+
+- Check `.mcp.json` is valid JSON (`node -e "JSON.parse(require('fs').readFileSync('.mcp.json','utf8'))"`). Env uses `${VAR}` (Claude) vs `{env:VAR}` (OpenCode). Run `claude --debug=mcp` and read `~/.claude/debug/<session>.txt`.
+
+### Codex `codex mcp list` empty
+
+- Check `.codex/config.toml` is `[mcp_servers.xxx]` TOML, or global `~/.codex/config.toml`. Run `codex --help`. Codex scans `.agents/skills` from CWD up to repo root — ensure `scripts/sync-hosts.sh --host=codex` was run (now pre-synced).
+
+### `.mcp.json` / `.codex/config.toml` invalid after `ai-eng init`
+
+- Templates at `config/hosts/claude-code/mcp.json.example` / `config/hosts/codex/config.toml.example` — copy again with `ai-eng init --host=all --force` or `scripts/sync-hosts.sh --host=all --force`.
+
+## CLI `ai-eng`
+
+### `ai-eng: command not found` after `npm install -g ai-engineering`
+
+- Ensure npm global bin in PATH (`%APPDATA%\npm` on Windows, `~/.npm-global/bin` or `~/.local/bin` on Linux). Try `npx ai-engineering --help` or `node ./bin/ai-engineering.js --help`.
+
+### `ai-eng init` warns `Dify MCP adapter not present`
+
+- Since `1014bfc` `ai-eng init` auto-copies `mcp/` + builds `dist` in target, this should not happen. If it does, manually: `cp -r <harness>/mcp <target>/mcp && npm --prefix <target>/mcp/dify-knowledge install && npm --prefix <target>/mcp/dify-knowledge run build`.
+
+### `npx ai-engineering` 404
+
+- Package not yet published to npm registry. Use `npx github:hungpt99-dev/ai-engineering init` or `npm install -g` from clone (`npm link` / `npm pack`). Publish via `npm publish --access public` with `NPM_TOKEN`.
+
 ## Skills / Agents
 
 ### Skill not showing up

@@ -87,6 +87,24 @@ function parseArgs(argv) {
 
 function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); }
 
+function copyDirRecursive(src, dst, force) {
+  if (!fs.existsSync(src)) return;
+  ensureDir(dst);
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dst, entry.name);
+    if (entry.isDirectory()) {
+      // skip node_modules and dist if force false and dst exists with content? Always copy except node_modules
+      if (entry.name === 'node_modules') continue;
+      copyDirRecursive(s, d, force);
+    } else {
+      if (fs.existsSync(d) && !force) continue;
+      ensureDir(path.dirname(d));
+      fs.copyFileSync(s, d);
+    }
+  }
+}
+
 function copyFile(src, dst, force) {
   if (fs.existsSync(dst) && !force) { console.log(`[info] skip ${dst} (exists, use --force)`); return; }
   ensureDir(path.dirname(dst));
@@ -106,15 +124,26 @@ function cmdInit(targetPath, opts) {
   // 1. opencode.json (if host includes opencode)
   if (host === 'opencode' || host === 'all') {
     copyFile(path.join(HARNESS_ROOT,'opencode.json'), path.join(cwd,'opencode.json'), force);
-    // ensure mcp/dify-knowledge is available in target? For init we copy AGENTS.md + .opencode + opencode.json only;
-    // Dify MCP adapter is expected via relative path mcp/dify-knowledge/dist/index.js — if target is fresh app repo without mcp/,
-    // the mcp command ["node","mcp/dify-knowledge/dist/index.js"] will fail. So for init we rewrite dify-knowledge command to absolute or npx fallback.
-    // Simpler: keep opencode.json as is and warn that Dify MCP needs harness mcp/ or global install.
-    if (!fs.existsSync(path.join(cwd,'mcp','dify-knowledge','dist','index.js'))) {
-      console.log('[warn] Dify MCP adapter not present in target (mcp/dify-knowledge/dist/index.js missing). Options:');
-      console.log('  a) Keep harness sibling and use global install: ai-eng global');
-      console.log('  b) Copy mcp/:  cp -r '+path.join(HARNESS_ROOT,'mcp')+' '+path.join(cwd,'mcp'));
-      console.log('  c) Install Dify MCP via npm (future)');
+  }
+  // Ensure Dify MCP adapter is present in target for any host (all hosts use same mcp/dify-knowledge)
+  {
+    const srcMcp = path.join(HARNESS_ROOT,'mcp');
+    const dstMcp = path.join(cwd,'mcp');
+    if (!fs.existsSync(path.join(dstMcp,'dify-knowledge','dist','index.js'))) {
+      if (fs.existsSync(srcMcp)) {
+        console.log(`[info] Copying Dify MCP adapter to ${dstMcp} ...`);
+        copyDirRecursive(srcMcp, dstMcp, force);
+        const targetDist = path.join(dstMcp,'dify-knowledge','dist','index.js');
+        if (!fs.existsSync(targetDist)) {
+          console.log('[info] Building Dify MCP in target (npm install + build)...');
+          const r = spawnSync('npm', ['--prefix', path.join(dstMcp,'dify-knowledge'), 'install'], { stdio: 'inherit', cwd });
+          if (r.status === 0) spawnSync('npm', ['--prefix', path.join(dstMcp,'dify-knowledge'), 'run', 'build'], { stdio: 'inherit', cwd });
+          if (!fs.existsSync(targetDist)) console.log('[warn] Dify MCP build in target failed — run manually: npm --prefix mcp/dify-knowledge install && npm --prefix mcp/dify-knowledge run build');
+          else console.log('[ok] Dify MCP built in target');
+        }
+      } else {
+        console.log('[warn] Dify MCP source not found at '+srcMcp);
+      }
     }
   }
   // 2. .mcp.json (if host includes claude)
