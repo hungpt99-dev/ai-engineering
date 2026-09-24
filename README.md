@@ -1,7 +1,14 @@
 # AI Engineering — Production-Ready Setup Repository
 
-Host-agnostic, tracker-pluggable AI coding harness for software teams. Works with **OpenCode / Claude Code / Codex** and **Redmine / Jira** (pick one or both) — same `AGENTS.md` + skills + adapters.
+Host-agnostic, tracker-pluggable AI coding harness. Works with **OpenCode / Claude Code / Codex** + **Redmine / Jira** (+ Dify Knowledge) — same `AGENTS.md` + skills. Now also as **CLI tool** `ai-eng` — không cần để app ngang hàng harness nữa.
 
+**CLI (khuyên dùng — không cần sibling):**
+```bash
+npx ai-engineering init --host=all --tracker=both   # trong app repo hiện tại
+# hoặc: npm install -g ai-engineering && ai-eng init --host=claude --tracker=jira ./my-app
+```
+
+**Harness clone (truyền thống):**
 ```
 git clone <this-repo>
         ↓
@@ -11,20 +18,19 @@ Host + MCP + Skills + Agents + Rules
         ↓
 configure credentials (.env)
         ↓
-clone any application repository
-        ↓
-start chosen host (opencode | claude | codex)
+start chosen host (opencode | claude | codex) trong app repo đã init
         ↓
 AI is ready to work
 ```
 
-Reusable across projects:
+Reusable — 2 cách:
 
 ```
-ai-engineering/   ← this repo
-    ├── Project A  ← app repo (sibling, host started here)
-    ├── Project B
-    └── Project C
+Cách A (CLI — không ngang hàng):
+  my-app/  ← đã ai-eng init (có .opencode/.claude/.agents + .mcp.json/.codex + AGENTS.md)
+
+Cách B (harness sibling — trước đây):
+  ai-engineering/ + Project A/B/C (sibling) → ai-eng global
 ```
 
 > No application source code, no RAG/embedding/vector DB duplication, no tracker UI duplication. This repo is the harness only.
@@ -67,9 +73,35 @@ ai-engineering/   ← this repo
 
 Details: `docs/architecture.md`, `config/hosts/README.md`, `config/trackers/`, `config/mcp/README.md`
 
-## Quick Start
+## Quick Start — 2 cách
 
-### Linux / macOS / WSL
+### A. CLI — trong app repo (không cần ngang hàng, khuyên dùng)
+
+```bash
+# Cài CLI 1 lần (chọn 1):
+npm install -g ai-engineering          # global
+# hoặc dùng npx không cần cài: npx ai-engineering init ...
+
+# Trong app repo bất kỳ:
+cd my-app
+ai-eng init --host=all --tracker=both          # OpenCode+Claude+Codex + Redmine+Jira
+# hoặc gọn: npx ai-engineering init --host=claude --tracker=jira
+# hoặc chỉ định thư mục: ai-eng init ./my-app --host=opencode --tracker=redmine --force
+
+cp .env.example .env  # điền DIFY_* + tracker + provider keys
+ai-eng check --tracker=jira   # validate
+ai-eng sync --host=all        # nếu đổi host sau này
+opencode   # hoặc claude / codex
+```
+
+One-liner từ GitHub (không cần clone harness):
+```bash
+npx github:hungpt99-dev/ai-engineering init --host=all --tracker=both
+```
+
+### B. Clone harness (truyền thống)
+
+#### Linux / macOS / WSL
 
 ```bash
 git clone <this-repo> ai-engineering && cd ai-engineering
@@ -78,21 +110,17 @@ git clone <this-repo> ai-engineering && cd ai-engineering
 ./setup/install.sh
 # Explicit:
 ./setup/install.sh --host=opencode --tracker=redmine
-# Claude + Jira:
 ./setup/install.sh --host=claude --tracker=jira
-# Codex + Jira:
-./setup/install.sh --host=codex --tracker=jira
-# All hosts + both trackers:
-./setup/install.sh --host=all --tracker=both
+./setup/install.sh --host=codex  --tracker=jira
+./setup/install.sh --host=all    --tracker=both
 
-# Other flags:
-./setup/install.sh --yes          # non-interactive
-./setup/install.sh --check        # validate only
-./scripts/configure.sh            # write .env (secrets not echoed)
-./setup/check.sh                  # validate (no secret leakage)
-./scripts/sync-hosts.sh --host=all  # sync .opencode → .claude/.agents
+# Flags:
+./setup/install.sh --yes
+./setup/install.sh --check
+./scripts/configure.sh
+./setup/check.sh
+./scripts/sync-hosts.sh --host=all
 
-# Start host
 opencode   # or claude  or  codex
 ```
 

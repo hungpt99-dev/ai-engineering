@@ -1,0 +1,37 @@
+{
+  "name": "ai-engineering",
+  "version": "2.0.0",
+  "description": "Host-agnostic, tracker-pluggable AI Engineering harness — CLI to init any app repo (OpenCode/Claude/Codex + Redmine/Jira + Dify)",
+  "type": "commonjs",
+  "bin": {
+    "ai-engineering": "./bin/ai-engineering.js",
+    "ai-eng": "./bin/ai-engineering.js"
+  },
+  "scripts": {
+    "postinstall": "node ./bin/postinstall.js || true"
+  },
+  "keywords": ["ai", "opencode", "claude-code", "codex", "mcp", "dify", "redmine", "jira"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hungpt99-dev/ai-engineering.git"
+  },
+  "files": [
+    "bin/",
+    "setup/",
+    "scripts/",
+    "config/",
+    ".opencode/",
+    "mcp/",
+    "docs/",
+    "AGENTS.md",
+    "opencode.json",
+    ".mcp.json",
+    ".codex/",
+    ".agents/",
+    ".claude/"
+  ]
+}
