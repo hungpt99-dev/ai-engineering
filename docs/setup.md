@@ -21,13 +21,19 @@
 git clone <this-repo> ai-engineering
 cd ai-engineering
 
-# One-command setup (interactive TUI for Oh My OpenAgent)
+# One-command setup — default host=opencode tracker=redmine (backward compat)
 ./setup/install.sh
 
-# If you prefer to validate only:
-./setup/install.sh --check
-# Or non-interactive (skip TUI, just install binaries):
-./setup/install.sh --yes
+# Pick host and tracker:
+./setup/install.sh --host=opencode --tracker=redmine   # OpenCode + Redmine (default)
+./setup/install.sh --host=claude   --tracker=jira      # Claude Code + Jira
+./setup/install.sh --host=codex    --tracker=jira      # Codex + Jira
+./setup/install.sh --host=all      --tracker=both      # all hosts + both trackers
+
+# Other flags:
+./setup/install.sh --check            # validate only
+./setup/install.sh --yes              # non-interactive (skip TUI)
+./setup/install.sh --host=codex --yes # Codex non-interactive
 ```
 
 ### Windows (native PowerShell)
@@ -36,23 +42,27 @@ cd ai-engineering
 git clone <this-repo> ai-engineering
 cd ai-engineering
 
-# One-command setup
+# Default
 .\setup\install.ps1
 
-# Validate only:
+# Pick host/tracker:
+.\setup\install.ps1 -Host claude -Tracker jira
+.\setup\install.ps1 -Host all -Tracker both
+
+# Flags:
 .\setup\install.ps1 -CheckOnly
-# Non-interactive:
 .\setup\install.ps1 -Yes
+.\setup\install.ps1 -Host codex -Tracker jira -Yes
 ```
 
-Both entry points do:
+Both entry points:
 
 1. Check prerequisites (Node ≥18, git, curl, bun).
-2. Install OpenCode (`curl -fsSL https://opencode.ai/install | bash` or `npm i -g opencode-ai` fallback; on Windows: `npm i -g opencode-ai`).
-3. Run `bunx oh-my-openagent install` (Ultimate for OpenCode — TUI walks through `plugin` registration + provider auth).
-4. Build Dify MCP adapter (`npm --prefix mcp/dify-knowledge install && npm run build`).
+2. Install chosen host runtime: OpenCode (`curl -fsSL https://opencode.ai/install | bash` / `npm i -g opencode-ai` / `npm i -g @anthropic-ai/claude-code` / `npm i -g @openai/codex`). For OpenCode, also `bunx oh-my-openagent install` (TUI).
+3. Sync host-agnostic skills/agents via `scripts/sync-hosts.*` (`--host=claude|codex|all` → `.claude/` / `.agents/`, `.mcp.json` / `.codex/config.toml` from templates).
+4. Build Dify MCP adapter (`npm --prefix mcp/dify-knowledge install && npm run build`) and prime tracker MCP caches (`npx @onozaty/redmine-mcp-server`, `npx @ahmetbarut/jira-mcp-server`).
 5. Create `.env` from `.env.example` if missing.
-6. Run `setup/check.*` validation.
+6. Run `setup/check.*` validation (host/tracker-aware).
 
 ## Configure Credentials
 
@@ -75,15 +85,21 @@ cp .env.example .env
 # edit with your editor — then validate
 ```
 
-Required vars (see `.env.example` for full list):
+Required vars (see `.env.example` for full list). Only configure the tracker you use:
 
 ```ini
 DIFY_BASE_URL=https://api.dify.ai/v1
 DIFY_API_KEY=dataset-...
 
+# Redmine (if tracker=redmine)
 REDMINE_URL=https://redmine.company.com
 REDMINE_API_KEY=...
 REDMINE_MCP_READ_ONLY=true
+
+# Jira Cloud (if tracker=jira)
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=your-email@company.com
+JIRA_API_TOKEN=...
 
 ANTHROPIC_API_KEY=...   # and/or OPENAI_API_KEY, etc.
 ```
@@ -92,31 +108,32 @@ ANTHROPIC_API_KEY=...   # and/or OPENAI_API_KEY, etc.
 
 - **Dify:** Dify Console → Knowledge → Service API → Create key. Base URL is `https://api.dify.ai/v1` for cloud or `https://dify.company.com/v1` for self-host.
 - **Redmine:** Redmine → My account → API access key → Show. Ensure REST API is enabled.
+- **Jira:** `id.atlassian.com` → Security → Create API token (use with `JIRA_EMAIL`). For Data Center, `JIRA_HOST`/`JIRA_TOKEN` via `@atlassian-dc-mcp/jira` — see `config/trackers/jira/README.md`.
 - **Providers:** `https://opencode.ai/docs/providers` — 75+ via Models.dev.
 
 ## Validate
 
 ```bash
-# Linux/macOS/WSL
+# Linux/macOS/WSL — tracker-aware (default checks whichever tracker is configured)
 ./setup/check.sh
-# or
-./scripts/health-check.sh
+./setup/check.sh --tracker=jira
+./scripts/health-check.sh --tracker=redmine
 
 # Windows
 .\setup\check.ps1
-# or
+.\setup\check.ps1 -Tracker jira
 .\scripts\health-check.ps1
 ```
 
-Checks (no secret leakage — only lengths / presence):
+Checks (no secret leakage — only lengths / presence, host/tracker-pluggable):
 
-- `opencode --version`, `opencode.json` valid JSON + required keys, agents/skills on disk
-- `oh-my-openagent` CLI resolvable, `doctor --json` (if installed)
+- Host: `opencode`/`claude`/`codex` version, `opencode.json`/`.mcp.json`/`.codex/config.toml` valid, agents/skills on disk, `AGENTS.md`, host sync (`.claude/skills`, `.agents/skills`)
+- Oh My OpenAgent (when host includes OpenCode) `doctor --json`
 - Dify MCP built (`dist/index.js`), `DIFY_*` set, HTTP 200 to `GET /datasets?limit=1`
-- Redmine MCP `npx` resolvable, `REDMINE_*` set, HTTP 200 to `GET /users/current.json`
+- Tracker MCP `npx` resolvable: Redmine `@onozaty/redmine-mcp-server` / Jira `@ahmetbarut/jira-mcp-server`, corresponding `*_URL`/`*_TOKEN` → connectivity 200 (`GET /users/current.json` or `GET /rest/api/3/myself`)
 - Exit code: `0` pass (warnings allowed), `1` fail.
 
-Fix failures, then re-run `setup/check.*` before starting OpenCode.
+Fix failures, then re-run `setup/check.*` before starting the host.
 
 ## Granular Scripts
 

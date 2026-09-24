@@ -1,11 +1,11 @@
 # Workflow
 
-## Mandatory Task Flow
+## Mandatory Task Flow — tracker-agnostic
 
 Every implementation task MUST follow this order (per `AGENTS.md`):
 
 ```
-Understand task (Redmine / user prompt)
+Understand task (Tracker issue — Redmine or Jira — / user prompt)
   → Research codebase (explore, grep, read)
   → Consult internal knowledge (Dify MCP) when domain/business context is needed
   → Create plan (task-analysis skill)
@@ -16,23 +16,24 @@ Understand task (Redmine / user prompt)
 
 Skipping research or Dify lookup when business/architecture context is relevant is a violation.
 
-## Example Session
+## Example Session (works with any host: opencode / claude / codex ; any tracker: Redmine / Jira)
 
 ### 1. Get the task
 
-User in OpenCode TUI:
+User in host TUI:
 
 ```
-Work on Redmine #1234
+Work on Jira PROJ-123   # or Redmine #1234
 ```
 
 Or directly:
 
 ```
+Jira issue https://your-domain.atlassian.net/browse/PROJ-123 — implement it
 Redmine issue https://redmine.company.com/issues/1234 — implement it
 ```
 
-The agent calls Redmine MCP `get_issue` / `getIssue` to fetch description, acceptance criteria, comments/history. Do not start from title alone.
+The agent calls Tracker MCP (`get_issue` / `jira_searchIssues` / `getIssue`) to fetch description, acceptance criteria, comments/history. Do not start from title alone.
 
 ### 2. Task analysis
 
@@ -126,9 +127,9 @@ Reviewer is read-only. Checks correctness, security, concurrency, performance, D
 
 ## Parallel Work
 
-- Use the `task` tool to run independent research/implementation slices in parallel.
-- Use Oh My OpenAgent background tasks where appropriate (repeated implementation/test/fix cycles, recovery).
-- For multi-app teams, keep AI Engineering as a sibling checkout — it is reusable across `Project A/B/C`:
+- Use the `task` tool (OpenCode) / background agents (Claude/Codex) to run independent slices in parallel.
+- Use Oh My OpenAgent background tasks (OpenCode) or host-native parallel agents where appropriate.
+- For multi-app teams, keep AI Engineering as a sibling checkout — it is reusable across `Project A/B/C` (host-agnostic, tracker-pluggable):
 
 ```
 ai-engineering/   ← this repo

@@ -17,15 +17,17 @@ if [[ ! -d "$ROOT/mcp/dify-knowledge/node_modules" ]]; then (cd "$ROOT/mcp/dify-
 (cd "$ROOT/mcp/dify-knowledge" && npm run build)
 echo -e "${GREEN}[ok]${NC} Dify MCP built: mcp/dify-knowledge/dist/index.js"
 
-# Verify Redmine MCP resolvable (npx will fetch on demand)
-echo "[info] Verifying Redmine MCP package (npx cache)…"
-if npx --yes @onozaty/redmine-mcp-server --help >/dev/null 2>&1; then echo -e "${GREEN}[ok]${NC} Redmine MCP package resolvable"; else echo -e "${YELLOW}[warn]${NC} Redmine MCP not yet cached — will be fetched on first OpenCode run via npx (requires network)"; fi
+# Verify tracker MCPs resolvable (npx will fetch on demand) — pluggable Redmine/Jira
+echo "[info] Verifying tracker MCP packages (npx cache)…"
+for pkg in "@onozaty/redmine-mcp-server" "@ahmetbarut/jira-mcp-server"; do
+  if npx --yes "$pkg" --help >/dev/null 2>&1; then echo -e "${GREEN}[ok]${NC} $pkg resolvable"; else echo -e "${YELLOW}[warn]${NC} $pkg not yet cached — will be fetched on first run via npx (requires network)"; fi
+done
 
-# Quick config sanity (fallback to grep if node missing)
+# Quick config sanity (fallback to grep if node missing) — checks dify + one tracker
 if command -v node >/dev/null 2>&1; then
-  if node -e "const j=require('$ROOT/opencode.json'); if(!j.mcp||!j.mcp['dify-knowledge']||!j.mcp['redmine']) throw 1" 2>/dev/null; then echo -e "${GREEN}[ok]${NC} opencode.json mcp entries present"; else echo -e "${YELLOW}[warn]${NC} opencode.json missing mcp entries — check config/opencode/opencode.example.json"; fi
+  if node -e "const j=require('$ROOT/opencode.json'); if(!j.mcp||!j.mcp['dify-knowledge']||(!j.mcp['redmine']&&!j.mcp['jira'])) throw 1" 2>/dev/null; then echo -e "${GREEN}[ok]${NC} opencode.json mcp entries present"; else echo -e "${YELLOW}[warn]${NC} opencode.json missing mcp entries — check config/opencode/opencode.example.json"; fi
 elif command -v node.exe >/dev/null 2>&1; then
-  if node.exe -e "const j=require('$ROOT/opencode.json'); if(!j.mcp||!j.mcp['dify-knowledge']||!j.mcp['redmine']) throw 1" 2>/dev/null; then echo -e "${GREEN}[ok]${NC} opencode.json mcp entries present"; else echo -e "${YELLOW}[warn]${NC} opencode.json missing mcp entries — check config/opencode/opencode.example.json"; fi
+  if node.exe -e "const j=require('$ROOT/opencode.json'); if(!j.mcp||!j.mcp['dify-knowledge']||(!j.mcp['redmine']&&!j.mcp['jira'])) throw 1" 2>/dev/null; then echo -e "${GREEN}[ok]${NC} opencode.json mcp entries present"; else echo -e "${YELLOW}[warn]${NC} opencode.json missing mcp entries — check config/opencode/opencode.example.json"; fi
 else
-  if grep -q "dify-knowledge" "$ROOT/opencode.json" && grep -q "redmine" "$ROOT/opencode.json"; then echo -e "${GREEN}[ok]${NC} opencode.json mcp entries present (grep)"; else echo -e "${YELLOW}[warn]${NC} opencode.json missing mcp entries"; fi
+  if grep -q "dify-knowledge" "$ROOT/opencode.json" && (grep -q "redmine" "$ROOT/opencode.json" || grep -q "jira" "$ROOT/opencode.json"); then echo -e "${GREEN}[ok]${NC} opencode.json mcp entries present (grep)"; else echo -e "${YELLOW}[warn]${NC} opencode.json missing mcp entries"; fi
 fi

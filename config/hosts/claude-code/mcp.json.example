@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "dify-knowledge": {
+      "command": "node",
+      "args": ["mcp/dify-knowledge/dist/index.js"],
+      "env": {
+        "DIFY_BASE_URL": "${DIFY_BASE_URL}",
+        "DIFY_API_KEY": "${DIFY_API_KEY}"
+      }
+    },
+    "redmine": {
+      "command": "npx",
+      "args": ["-y", "@onozaty/redmine-mcp-server"],
+      "env": {
+        "REDMINE_URL": "${REDMINE_URL}",
+        "REDMINE_API_KEY": "${REDMINE_API_KEY}",
+        "REDMINE_MCP_READ_ONLY": "${REDMINE_MCP_READ_ONLY}"
+      }
+    },
+    "jira": {
+      "command": "npx",
+      "args": ["-y", "@ahmetbarut/jira-mcp-server"],
+      "env": {
+        "JIRA_BASE_URL": "${JIRA_BASE_URL}",
+        "JIRA_EMAIL": "${JIRA_EMAIL}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}"
+      }
+    }
+  }
+}

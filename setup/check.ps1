@@ -60,7 +60,7 @@ if (NeedCmd "opencode") {
       $j = Get-Content $ocJson -Raw | ConvertFrom-Json
       $errs = @()
       if (-not $j.'$schema') { $errs += "missing schema" }
-      if (-not $j.mcp) { $errs += "missing mcp" } else { if (-not $j.mcp.'dify-knowledge') { $errs += "missing mcp.dify-knowledge" }; if (-not $j.mcp.redmine) { $errs += "missing mcp.redmine" } }
+      if (-not $j.mcp) { $errs += "missing mcp" } else { if (-not $j.mcp.'dify-knowledge') { $errs += "missing mcp.dify-knowledge" }; if (-not $j.mcp.redmine -and -not $j.mcp.jira) { $errs += "missing mcp tracker (redmine or jira)" } }
       if (-not $j.agent -or -not $j.agent.developer) { $errs += "missing agent.developer" }
       if ($errs.Count -eq 0) { Pass "opencode.json: required keys present" } else { Fail "opencode.json: $($errs -join '; ')" }
     } catch { Fail "opencode.json key check failed: $_" }
@@ -100,9 +100,10 @@ if ($env:DIFY_BASE_URL -and $env:DIFY_API_KEY) {
 }
 
 Write-Host ""
-Write-Host "-- Redmine MCP --"
+Write-Host "-- Task Tracker MCP (Redmine / Jira) --"
+Write-Host "[tracker] Redmine"
 try { & npx --yes @onozaty/redmine-mcp-server --help 2>&1 | Out-Null; Pass "Redmine MCP package resolvable (npx)" } catch { Info "Redmine MCP not yet cached -- will be fetched on first run via npx" }
-if ($env:REDMINE_URL) { Pass "REDMINE_URL set" } else { Warn "REDMINE_URL not set" }
+if ($env:REDMINE_URL) { Pass "REDMINE_URL set" } else { Warn "REDMINE_URL not set (set if using Redmine)" }
 if ($env:REDMINE_API_KEY) { Pass "REDMINE_API_KEY set (length $($env:REDMINE_API_KEY.Length))" } else { Warn "REDMINE_API_KEY not set" }
 if ($env:REDMINE_URL -and $env:REDMINE_API_KEY) {
   try {
@@ -118,6 +119,34 @@ if ($env:REDMINE_URL -and $env:REDMINE_API_KEY) {
     else { Warn "Redmine connectivity: failed - $($exc.Message)" }
   }
 }
+Write-Host "[tracker] Jira"
+try { & npx --yes @ahmetbarut/jira-mcp-server --help 2>&1 | Out-Null; Pass "Jira MCP package resolvable (npx)" } catch { Info "Jira MCP not yet cached -- will be fetched on first run via npx" }
+if ($env:JIRA_BASE_URL) { Pass "JIRA_BASE_URL set" } else { Warn "JIRA_BASE_URL not set (set if using Jira Cloud)" }
+if ($env:JIRA_API_TOKEN) { Pass "JIRA_API_TOKEN set (length $($env:JIRA_API_TOKEN.Length))" } else { Warn "JIRA_API_TOKEN not set" }
+if ($env:JIRA_BASE_URL -and $env:JIRA_API_TOKEN) {
+  try {
+    $pair = "${env:JIRA_EMAIL}:$env:JIRA_API_TOKEN"
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes($pair)
+    $b64 = [Convert]::ToBase64String($bytes)
+    $headers = @{ Authorization = "Basic $b64" }
+    $resp = Invoke-WebRequest -Uri "$env:JIRA_BASE_URL/rest/api/3/myself" -Headers $headers -Method Get -TimeoutSec 8 -UseBasicParsing -ErrorAction Stop
+    if ($resp.StatusCode -eq 200) { Pass "Jira connectivity: 200 OK ($env:JIRA_BASE_URL)" } else { Warn "Jira connectivity: HTTP $($resp.StatusCode)" }
+  } catch {
+    $exc = $_.Exception
+    $code = $null
+    try { $code = $exc.Response.StatusCode.Value__ } catch {}
+    if ($code -eq 401) { Fail "Jira connectivity: 401 Unauthorized -- check JIRA_EMAIL/JIRA_API_TOKEN" }
+    elseif ($code -eq 403) { Fail "Jira connectivity: 403 Forbidden" }
+    else { Warn "Jira connectivity: failed - $($exc.Message)" }
+  }
+}
+if (-not $env:REDMINE_URL -and -not $env:JIRA_BASE_URL) { Warn "No tracker configured -- set REDMINE_URL or JIRA_BASE_URL in .env" }
+Write-Host ""
+Write-Host "-- Host sync --"
+if (Test-Path (Join-Path $Root ".claude\skills")) { Pass "Claude Code skills synced (.claude/skills)" } else { Warn "Claude skills not synced -- run scripts/sync-hosts.ps1 -HostName claude" }
+if (Test-Path (Join-Path $Root ".agents\skills")) { Pass "Codex/Agents skills synced (.agents/skills)" } else { Warn "Codex skills not synced -- run scripts/sync-hosts.ps1 -HostName codex" }
+if (Test-Path (Join-Path $Root ".mcp.json")) { Pass "Claude .mcp.json present" } else { Info ".mcp.json not present (only needed for Claude host)" }
+if (Test-Path (Join-Path $Root ".codex\config.toml")) { Pass "Codex .codex/config.toml present" } else { Info ".codex/config.toml not present (only needed for Codex host)" }
 
 Write-Host ""
 Write-Host "================ Summary ================"

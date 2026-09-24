@@ -1,0 +1,17 @@
+# Codex MCP — example (copy to ~/.codex/config.toml or .codex/config.toml)
+# See https://developers.openai.com/codex and config/hosts/codex/README.md
+
+[mcp_servers.dify-knowledge]
+command = "node"
+args = ["mcp/dify-knowledge/dist/index.js"]
+env = { DIFY_BASE_URL = "${DIFY_BASE_URL}", DIFY_API_KEY = "${DIFY_API_KEY}" }
+
+[mcp_servers.redmine]
+command = "npx"
+args = ["-y", "@onozaty/redmine-mcp-server"]
+env = { REDMINE_URL = "${REDMINE_URL}", REDMINE_API_KEY = "${REDMINE_API_KEY}", REDMINE_MCP_READ_ONLY = "${REDMINE_MCP_READ_ONLY}" }
+
+[mcp_servers.jira]
+command = "npx"
+args = ["-y", "@ahmetbarut/jira-mcp-server"]
+env = { JIRA_BASE_URL = "${JIRA_BASE_URL}", JIRA_EMAIL = "${JIRA_EMAIL}", JIRA_API_TOKEN = "${JIRA_API_TOKEN}" }

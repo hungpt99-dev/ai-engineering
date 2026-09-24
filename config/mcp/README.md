@@ -58,8 +58,49 @@ Local thin adapter at `mcp/dify-knowledge/`. See `mcp/dify-knowledge/README.md`.
 
 **No RAG implementation here** — Dify handles ingestion, chunking, embeddings, reranking, vector storage. This adapter only calls `GET /datasets`, `POST /datasets/{id}/retrieve`, `GET /datasets/{id}/documents/{doc_id}`.
 
+## Jira MCP
+
+Pluggable. Default is **Cloud** via `@ahmetbarut/jira-mcp-server` (`JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`). Alternatives: `@atlassian-dc-mcp/jira` (Data Center, `JIRA_HOST`/`JIRA_TOKEN`), Atlassian **Rovo** remote (`/v1/mcp`, OAuth), `mcp-jira-cloud-server` (46 tools). See `config/trackers/jira/README.md`.
+
+**OpenCode example** (`opencode.json` `mcp.jira`):
+
+```json
+"jira": {
+  "type": "local",
+  "command": ["npx","-y","@ahmetbarut/jira-mcp-server"],
+  "environment": {
+    "JIRA_BASE_URL": "{env:JIRA_BASE_URL}",
+    "JIRA_EMAIL": "{env:JIRA_EMAIL}",
+    "JIRA_API_TOKEN": "{env:JIRA_API_TOKEN}"
+  }
+}
+```
+
+Claude Code (`.mcp.json`) and Codex (`[mcp_servers.jira]`) use same `command`/`env`. Only configure the tracker you use — `setup/check.*` validates whichever `*_URL`/`*_TOKEN` is set, warns for the other.
+
+## Dify Knowledge MCP
+
+Local thin adapter at `mcp/dify-knowledge/`. See `mcp/dify-knowledge/README.md`.
+
+**No RAG implementation here** — Dify handles ingestion, chunking, embeddings, reranking, vector storage. This adapter only calls `GET /datasets`, `POST /datasets/{id}/retrieve`, `GET /datasets/{id}/documents/{doc_id}`.
+
+Host mappings:
+- OpenCode: `opencode.json` `mcp.dify-knowledge` (`type: local`, `command: ["node","mcp/dify-knowledge/dist/index.js"]`)
+- Claude Code: `.mcp.json` `mcpServers.dify-knowledge`
+- Codex: `config.toml` `[mcp_servers.dify-knowledge]`
+
 ## Local Git
 
-OpenCode uses `bash` + `git` directly. No Git MCP is configured — intentionally.
+All hosts use `bash` + `git` directly. No Git MCP for basic ops — intentionally.
 
-A remote Git/MR MCP (GitHub/GitLab) can be added later if PR/review/comment workflows become required. To add it, create a new `mcp` entry with `type: remote` or `type: local` and follow `https://opencode.ai/docs/mcp-servers`.
+A remote Git/MR MCP (GitHub/GitLab) can be added later if PR/review/comment workflows become required. To add it, create a new `mcp` entry with `type: remote` or `type: local` and follow the host's MCP docs (OpenCode: `https://opencode.ai/docs/mcp-servers`, Claude: `https://code.claude.com/docs/en/mcp`, Codex: `https://developers.openai.com/codex/mcp`).
+
+## Host matrix
+
+| Tracker | OpenCode | Claude Code | Codex |
+|---|---|---|---|
+| Redmine | `opencode.json` `mcp.redmine` | `.mcp.json` `redmine` | `[mcp_servers.redmine]` |
+| Jira | `opencode.json` `mcp.jira` | `.mcp.json` `jira` | `[mcp_servers.jira]` |
+| Dify | `mcp.dify-knowledge` | `mcpServers.dify-knowledge` | `mcp_servers.dify-knowledge` |
+
+See `config/hosts/*/README.md` and `config/trackers/*/README.md`.

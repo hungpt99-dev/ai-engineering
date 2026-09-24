@@ -77,7 +77,7 @@ if need_cmd opencode; then
         const errs=[];
         if(!j['\$schema']) errs.push('missing \$schema');
         if(!j.mcp) errs.push('missing mcp');
-        else { if(!j.mcp['dify-knowledge']) errs.push('missing mcp.dify-knowledge'); if(!j.mcp['redmine']) errs.push('missing mcp.redmine'); }
+        else { if(!j.mcp['dify-knowledge']) errs.push('missing mcp.dify-knowledge'); if(!j.mcp['redmine'] && !j.mcp['jira']) errs.push('missing mcp tracker (redmine or jira)'); }
         if(!j.agent || !j.agent.developer) errs.push('missing agent.developer');
         if(errs.length){ console.error(errs.join('; ')); process.exit(1); }
       " 2>&1 && pass "opencode.json: required keys present" || fail "opencode.json: missing required keys (see above)"
@@ -128,17 +128,38 @@ if [[ -n "${DIFY_BASE_URL:-}" && -n "${DIFY_API_KEY:-}" ]]; then
   if [[ "$HTTP_CODE" == "200" ]]; then pass "Dify connectivity: 200 OK ($DIFY_BASE_URL)"; elif [[ "$HTTP_CODE" == "401" ]]; then fail "Dify connectivity: 401 Unauthorized — check DIFY_API_KEY"; elif [[ "$HTTP_CODE" == "403" ]]; then fail "Dify connectivity: 403 Forbidden — check API access / key scope"; elif [[ "$HTTP_CODE" == "curl_fail"* ]]; then warn "Dify connectivity: curl failed (network or URL?) — $HTTP_CODE"; else warn "Dify connectivity: HTTP $HTTP_CODE (see /tmp/dify_check.json)"; fi
 fi
 
-# 5. Redmine MCP
+# 5. Task Tracker MCP (pluggable: Redmine and/or Jira)
 echo ""
-echo "-- Redmine MCP --"
+echo "-- Task Tracker MCP --"
+# Redmine
+echo "[tracker] Redmine"
 if npx -y @onozaty/redmine-mcp-server --help >/dev/null 2>&1 || npm ls -g @onozaty/redmine-mcp-server >/dev/null 2>&1; then pass "Redmine MCP package resolvable (npx)"; else info "Redmine MCP not yet cached — will be fetched on first run via npx"; fi
-if [[ -n "${REDMINE_URL:-}" ]]; then pass "REDMINE_URL set"; else warn "REDMINE_URL not set"; fi
+if [[ -n "${REDMINE_URL:-}" ]]; then pass "REDMINE_URL set"; else warn "REDMINE_URL not set (set if using Redmine)"; fi
 if [[ -n "${REDMINE_API_KEY:-}" ]]; then pass "REDMINE_API_KEY set (length ${#REDMINE_API_KEY})"; else warn "REDMINE_API_KEY not set"; fi
 if [[ -n "${REDMINE_URL:-}" && -n "${REDMINE_API_KEY:-}" ]]; then
-  # Redmine API: GET /users/current.json  (quick auth check)
   CODE="$(curl -s -o /tmp/redmine_check.json -w "%{http_code}" -H "X-Redmine-API-Key: $REDMINE_API_KEY" "$REDMINE_URL/users/current.json" --max-time 8 2>&1 || echo "curl_fail")"
   if [[ "$CODE" == "200" ]]; then pass "Redmine connectivity: 200 OK ($REDMINE_URL)"; elif [[ "$CODE" == "401" ]]; then fail "Redmine connectivity: 401 Unauthorized — check REDMINE_API_KEY"; elif [[ "$CODE" == "403" ]]; then fail "Redmine connectivity: 403 Forbidden"; else warn "Redmine connectivity: HTTP $CODE (see /tmp/redmine_check.json)"; fi
 fi
+# Jira
+echo "[tracker] Jira"
+if npx -y @ahmetbarut/jira-mcp-server --help >/dev/null 2>&1 || npm ls -g @ahmetbarut/jira-mcp-server >/dev/null 2>&1; then pass "Jira MCP package resolvable (npx)"; else info "Jira MCP not yet cached — will be fetched on first run via npx"; fi
+if [[ -n "${JIRA_BASE_URL:-}" ]]; then pass "JIRA_BASE_URL set"; else warn "JIRA_BASE_URL not set (set if using Jira Cloud)"; fi
+if [[ -n "${JIRA_API_TOKEN:-}" ]]; then pass "JIRA_API_TOKEN set (length ${#JIRA_API_TOKEN})"; else warn "JIRA_API_TOKEN not set"; fi
+if [[ -n "${JIRA_BASE_URL:-}" && -n "${JIRA_API_TOKEN:-}" ]]; then
+  # Jira Cloud: GET /rest/api/3/myself  (or /rest/api/2/myself)
+  CODE2="$(curl -s -o /tmp/jira_check.json -w "%{http_code}" -u "${JIRA_EMAIL:-}:${JIRA_API_TOKEN}" "$JIRA_BASE_URL/rest/api/3/myself" --max-time 8 2>&1 || echo "curl_fail")"
+  if [[ "$CODE2" == "200" ]]; then pass "Jira connectivity: 200 OK ($JIRA_BASE_URL)"; elif [[ "$CODE2" == "401" ]]; then fail "Jira connectivity: 401 Unauthorized — check JIRA_EMAIL/JIRA_API_TOKEN"; elif [[ "$CODE2" == "403" ]]; then fail "Jira connectivity: 403 Forbidden"; else warn "Jira connectivity: HTTP $CODE2 (see /tmp/jira_check.json)"; fi
+fi
+# At least one tracker should be configured
+if [[ -z "${REDMINE_URL:-}" && -z "${JIRA_BASE_URL:-}" ]]; then warn "No tracker configured — set REDMINE_URL or JIRA_BASE_URL in .env"; fi
+
+# 6. Host sync (agnostic)
+echo ""
+echo "-- Host sync --"
+if [[ -d "$ROOT/.claude/skills" ]]; then pass "Claude Code skills synced (.claude/skills)" ; else warn "Claude skills not synced — run scripts/sync-hosts.sh --host=claude"; fi
+if [[ -d "$ROOT/.agents/skills" ]]; then pass "Codex/Agents skills synced (.agents/skills)"; else warn "Codex skills not synced — run scripts/sync-hosts.sh --host=codex"; fi
+if [[ -f "$ROOT/.mcp.json" ]]; then pass "Claude .mcp.json present"; else info ".mcp.json not present (only needed for Claude host)"; fi
+if [[ -f "$ROOT/.codex/config.toml" ]]; then pass "Codex .codex/config.toml present"; else info ".codex/config.toml not present (only needed for Codex host)"; fi
 
 # Summary
 echo ""

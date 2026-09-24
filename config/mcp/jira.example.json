@@ -1,0 +1,13 @@
+{
+  "_comment": "Paste into opencode.json > mcp.jira (or .mcp.json / config.toml equivalent). Uses @ahmetbarut/jira-mcp-server for Cloud. See config/trackers/jira/README.md for Data Center / Rovo alternatives.",
+  "jira": {
+    "type": "local",
+    "command": ["npx", "-y", "@ahmetbarut/jira-mcp-server"],
+    "environment": {
+      "JIRA_BASE_URL": "{env:JIRA_BASE_URL}",
+      "JIRA_EMAIL": "{env:JIRA_EMAIL}",
+      "JIRA_API_TOKEN": "{env:JIRA_API_TOKEN}"
+    },
+    "enabled": true
+  }
+}

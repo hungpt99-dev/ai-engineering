@@ -1,19 +1,19 @@
 # AI Engineering — Production-Ready Setup Repository
 
-Complete, reusable AI coding environment for a software development team. Clone → run setup → OpenCode + Oh My OpenAgent + MCP + Skills + Agents + Rules → configure credentials → work on any app repo.
+Host-agnostic, tracker-pluggable AI coding harness for software teams. Works with **OpenCode / Claude Code / Codex** and **Redmine / Jira** (pick one or both) — same `AGENTS.md` + skills + adapters.
 
 ```
 git clone <this-repo>
         ↓
-run setup (install.sh / install.ps1)
+run setup --host=... --tracker=...   (install.sh / install.ps1)
         ↓
-OpenCode + Oh My OpenAgent + MCP + Skills + Agents + Rules
+Host + MCP + Skills + Agents + Rules
         ↓
 configure credentials (.env)
         ↓
 clone any application repository
         ↓
-start OpenCode
+start chosen host (opencode | claude | codex)
         ↓
 AI is ready to work
 ```
@@ -22,44 +22,50 @@ Reusable across projects:
 
 ```
 ai-engineering/   ← this repo
-    ├── Project A  ← app repo (sibling checkout, opencode started here)
+    ├── Project A  ← app repo (sibling, host started here)
     ├── Project B
     └── Project C
 ```
 
-> This repo contains **no application source code**, no RAG/embedding/vector DB re-implementation, and no Redmine duplication. It is the AI Engineering harness only.
+> No application source code, no RAG/embedding/vector DB duplication, no tracker UI duplication. This repo is the harness only.
 
-## Architecture
+## Architecture — pluggable hosts & trackers
 
 ```
-                         OpenCode
-                            │
-                    Oh My OpenAgent (plugin)
-                            │
-              ┌─────────────┼─────────────┐
-              │             │             │
-              ▼             ▼             ▼
-         Redmine MCP     Dify MCP      Local Git
-         (npx)           (local node)  (bash)
-              │             │
-              ▼             ▼
-            Tasks      Dify Knowledge
-                            │
-                     ┌──────┴──────┐
-                     ▼             ▼
-              Internal Docs   Google Drive
+                ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+                │  OpenCode   │ │ Claude Code │ │  Codex CLI  │  ← --host
+                │  + OhMy OMO │ │             │ │             │
+                └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+                       └───────────────┼───────────────┘
+                                       │
+              ┌────────────────────────┼────────────────────────┐
+              │                        │                        │
+              ▼                        ▼                        ▼
+        Tracker MCP               Dify MCP                Local Git  ← --tracker
+     (Redmine | Jira)          (local node)              (bash)
+   @onozaty/redmine   mcp/dify-knowledge/dist/index.js
+   @ahmetbarut/jira              │                        │
+              │                  │                        │
+              ▼                  ▼                        │
+            Tasks          Dify Knowledge                 │
+                                 │                       │
+                          ┌──────┴──────┐                │
+                          ▼             ▼                │
+                   Internal Docs   Google Drive          │
+                                                         │
+                    All hosts share: AGENTS.md, skills, agents
 ```
 
 | Layer | Role | Package / Config |
 |---|---|---|
-| **OpenCode** | Primary coding agent — inspect, edit, test, debug, review | `opencode.json` (`$schema: https://opencode.ai/config.json`), `AGENTS.md` |
-| **Oh My OpenAgent** | Orchestration — multi-agent workflows, background tasks, recovery | `oh-my-openagent` (npm), `plugin: ["oh-my-openagent"]` |
-| **Redmine MCP** | Ticket context — description, acceptance criteria, history | `@onozaty/redmine-mcp-server` (npx, `REDMINE_MCP_READ_ONLY=true`) |
-| **Dify Knowledge** | Internal docs / business rules / API contracts (RAG owner) | Dify Cloud / self-host, `GET /datasets`, `POST /datasets/{id}/retrieve` |
-| **Dify MCP** | Thin adapter — 3 tools only | `mcp/dify-knowledge/` (Node, stdio, `search_knowledge / list_knowledge_bases / get_document`) |
-| **Local Git** | Source ops — `bash` + `git` directly | No Git MCP for basic ops (intentional) |
+| **Hosts** (pick `opencode`/`claude`/`codex`/`all`) | Coding agent | OpenCode `opencode.json` / Claude `.mcp.json` / Codex `.codex/config.toml` |
+| **Oh My OpenAgent** | Orchestration for OpenCode host | `oh-my-openagent`, `plugin: ["oh-my-openagent"]` |
+| **Tracker MCP** (pick `redmine`/`jira`/`both`) | Ticket context | Redmine `@onozaty/redmine-mcp-server` / Jira `@ahmetbarut/jira-mcp-server` (or Data Center/Rovo) |
+| **Dify Knowledge** | Internal docs / business rules (RAG owner) | Dify Cloud/self-host, `GET /datasets`, `POST /datasets/{id}/retrieve` |
+| **Dify MCP** | Thin adapter — 3 tools only | `mcp/dify-knowledge/` (`search_knowledge / list_knowledge_bases / get_document`) |
+| **Local Git** | Source ops — `bash` + `git` directly | No Git MCP for basic ops |
 
-Details: `docs/architecture.md`
+Details: `docs/architecture.md`, `config/hosts/README.md`, `config/trackers/`, `config/mcp/README.md`
 
 ## Quick Start
 
@@ -67,41 +73,63 @@ Details: `docs/architecture.md`
 
 ```bash
 git clone <this-repo> ai-engineering && cd ai-engineering
-./setup/install.sh          # interactive TUI for Oh My OpenAgent
-# or: ./setup/install.sh --yes   # non-interactive
-# or: ./setup/install.sh --check # validate only
-./scripts/configure.sh      # write .env (secrets not echoed)
-./setup/check.sh            # validate (no secret leakage)
-opencode                    # start TUI — Tab switches agents
+
+# Default: OpenCode + Redmine
+./setup/install.sh
+# Explicit:
+./setup/install.sh --host=opencode --tracker=redmine
+# Claude + Jira:
+./setup/install.sh --host=claude --tracker=jira
+# Codex + Jira:
+./setup/install.sh --host=codex --tracker=jira
+# All hosts + both trackers:
+./setup/install.sh --host=all --tracker=both
+
+# Other flags:
+./setup/install.sh --yes          # non-interactive
+./setup/install.sh --check        # validate only
+./scripts/configure.sh            # write .env (secrets not echoed)
+./setup/check.sh                  # validate (no secret leakage)
+./scripts/sync-hosts.sh --host=all  # sync .opencode → .claude/.agents
+
+# Start host
+opencode   # or claude  or  codex
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
 git clone <this-repo> ai-engineering; cd ai-engineering
+
+# Default: OpenCode + Redmine
 .\setup\install.ps1
+# Explicit:
+.\setup\install.ps1 -Host claude -Tracker jira
+.\setup\install.ps1 -Host all -Tracker both
+
 .\scripts\configure.ps1
 .\setup\check.ps1
-opencode
+.\scripts\sync-hosts.ps1 -HostName all
+
+opencode  # or claude  or codex
 ```
 
-**What `setup/install.*` does:** checks Node ≥18 / git / curl / bun → installs OpenCode (`curl -fsSL https://opencode.ai/install | bash` or `npm i -g opencode-ai`) → `bunx oh-my-openagent install` → builds `mcp/dify-knowledge` → creates `.env` from `.env.example` → validates.
+**What `setup/install.*` does:** checks Node ≥18 / git / curl / bun → installs chosen host runtime → (if OpenCode) `bunx oh-my-openagent install` → `scripts/sync-hosts` → builds `mcp/dify-knowledge` → primes tracker MCP `npx` caches → creates `.env` → validates.
 
-**Granular steps** (if you prefer):
+**Granular steps:**
 
 ```bash
 ./scripts/install-opencode.sh  # or .ps1
 ./scripts/install-omo.sh
-./scripts/install-mcp.sh
+./scripts/install-mcp.sh        # tracker arg optional
+./scripts/sync-hosts.sh --host=claude
 ./scripts/configure.sh
 ./setup/check.sh
 ```
 
 ## Configuration
 
-### Credentials (`.env`)
-
-Copy and fill — never commit `.env`:
+### Credentials (`.env`) — pluggable tracker
 
 ```bash
 cp .env.example .env   # then edit, or use scripts/configure.*
@@ -110,86 +138,84 @@ cp .env.example .env   # then edit, or use scripts/configure.*
 | Var | Description | Where to get it |
 |---|---|---|
 | `DIFY_BASE_URL` | `https://api.dify.ai/v1` or `https://dify.company.com/v1` | Dify instance URL + `/v1` |
-| `DIFY_API_KEY` | Dataset API key (`Bearer`) — one key can access all visible bases | Dify Console → Knowledge → Service API |
-| `REDMINE_URL` | `https://redmine.company.com` | Your Redmine |
+| `DIFY_API_KEY` | Dataset API key (`Bearer`) | Dify Console → Knowledge → Service API |
+| `REDMINE_URL` | `https://redmine.company.com` | Redmine — if using Redmine |
 | `REDMINE_API_KEY` | API key | Redmine → My account → API access key |
-| `REDMINE_MCP_READ_ONLY` | `true` (recommended) | Blocks write tools |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | At least one provider | `https://opencode.ai/docs/providers` |
+| `JIRA_BASE_URL` | `https://your-domain.atlassian.net` | Jira Cloud — if using Jira |
+| `JIRA_EMAIL` / `JIRA_API_TOKEN` | Email + token | `id.atlassian.com` → Security → Create API token |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | At least one provider | https://opencode.ai/docs/providers (OpenCode) or provider docs |
 
-`opencode.json` references them via `{env:VAR}` — no secrets in JSON.
+Only configure the tracker you use — `setup/check.*` warns for the other, fails only for the chosen `--tracker`.
 
-### OpenCode Config
+`opencode.json` uses `{env:VAR}`, Claude `.mcp.json` uses `${VAR}`, Codex `config.toml` uses `${VAR}` — no secrets in JSON/TOML.
 
-Project config at `opencode.json` (checked into git, no secrets):
+### Host configs
 
-- `$schema: https://opencode.ai/config.json`
-- `plugin: ["oh-my-openagent"]` — prefer new name; legacy `oh-my-opencode` loads with warning
-- `instructions: ["AGENTS.md"]` — global rules
-- `mcp: { dify-knowledge (local node), redmine (npx) }`
-- `agent: { developer (primary), researcher (subagent read-only), reviewer (subagent read-only) }`
-- `permission.skill.*: allow`
-
-TUI settings: `config/opencode/tui.example.json` → `tui.json` (`$schema: https://opencode.ai/tui.json`).
-
-Global user overrides: `~/.config/opencode/opencode.json` (not in this repo).
-
-### Agents
-
-| Agent | File | Mode | Access | Use |
-|---|---|---|---|---|
-| **developer** | `.opencode/agents/developer.md` | primary | `edit: allow, bash: allow` | Implement, test, debug |
-| **researcher** | `.opencode/agents/researcher.md` | subagent | `edit: deny` | Read-only codebase & knowledge research |
-| **reviewer** | `.opencode/agents/reviewer.md` | subagent | `edit: deny` | Read-only review (security/perf/correctness) |
-
-Invoke: `Tab` switches primary agents; `@researcher` / `@reviewer` mentions subagents.
-
-### Skills
-
-| Skill | Location | Purpose |
+| Host | Config file (this repo) | Installed location |
 |---|---|---|
-| `task-analysis` | `.opencode/skills/task-analysis/SKILL.md` | Requirements → acceptance criteria → plan |
-| `codebase-exploration` | `.opencode/skills/codebase-exploration/SKILL.md` | Structure, stack, patterns, risks before editing |
-| `internal-knowledge` | `.opencode/skills/internal-knowledge/SKILL.md` | Dify lookup when domain context needed |
-| `implementation` | `.opencode/skills/implementation/SKILL.md` | Smallest reasonable change, KISS/YAGNI/DRY/SOLID |
-| `testing-debugging` | `.opencode/skills/testing-debugging/SKILL.md` | Test → analyze → fix root cause → repeat |
-| `code-review` | `.opencode/skills/code-review/SKILL.md` | Correctness/security/perf/compat/tests |
+| OpenCode (default) | `opencode.json` (+ `config/opencode/opencode.example.json`) | `.opencode/` + `opencode.json` (project) or `~/.config/opencode/` (global via `install-global.*`) |
+| Claude Code | `config/hosts/claude-code/mcp.json.example` → `.mcp.json` | `.claude/skills/`, `.mcp.json` |
+| Codex | `config/hosts/codex/config.toml.example` → `.codex/config.toml` | `.agents/skills/` (universal), `.codex/config.toml` |
 
-Load via native `skill` tool: `skill({ name: "task-analysis" })`.
+TUI/extra: `config/opencode/tui.example.json` → `tui.json`.
+
+Sync: `scripts/sync-hosts.sh --host=claude|codex|all` copies `.opencode/skills` + `.opencode/agents` to host dirs.
+
+### Agents (host-agnostic)
+
+| Agent | Source | Mode | Access | Use |
+|---|---|---|---|---|
+| **developer** | `.opencode/agents/developer.md` | primary | `edit: allow` | Implement, test, debug |
+| **researcher** | `.opencode/agents/researcher.md` | subagent | `edit: deny` | Read-only research |
+| **reviewer** | `.opencode/agents/reviewer.md` | subagent | `edit: deny` | Read-only review |
+
+Synced to `.claude/agents/` (Claude) and `.agents/` (universal). Invoke: `@researcher` / `@reviewer`, or host's Tab/agent switch.
+
+### Skills (host-agnostic, open standard)
+
+| Skill | Source | Purpose |
+|---|---|---|
+| `task-analysis` | `.opencode/skills/task-analysis/SKILL.md` | Requirements → plan |
+| `codebase-exploration` | `.opencode/skills/codebase-exploration/SKILL.md` | Structure/stack/risks |
+| `internal-knowledge` | `.opencode/skills/internal-knowledge/SKILL.md` | Dify lookup |
+| `implementation` | `.opencode/skills/implementation/SKILL.md` | Smallest change |
+| `testing-debugging` | `.opencode/skills/testing-debugging/SKILL.md` | Test loop |
+| `code-review` | `.opencode/skills/code-review/SKILL.md` | Review |
+
+Source at `.opencode/skills/`; synced to `.claude/skills/` and `.agents/skills/`. Load via `skill({ name: "…" })` (OpenCode), `/skill-name` or model-invoke (Claude/Codex).
 
 ## Validation
 
 ```bash
-./setup/check.sh        # Linux/macOS/WSL
-.\setup\check.ps1       # Windows
-# Aliases:
-./scripts/health-check.sh / .ps1
+./setup/check.sh --tracker=redmine   # or jira / both
+.\setup\check.ps1 -Tracker jira
+./scripts/health-check.sh / .ps1  # aliases
 ```
 
-Checks (no secret values printed, only presence/length):
+Checks (no secret values):
 
-- `opencode --version`, `opencode.json` valid JSON + required keys
-- Agents/skills/`AGENTS.md` on disk
-- `oh-my-openagent` resolvable + `doctor --json`
-- `mcp/dify-knowledge/dist/index.js` built; `DIFY_*` → `GET /datasets?limit=1` 200
-- `npx @onozaty/redmine-mcp-server` resolvable; `REDMINE_*` → `GET /users/current.json` 200
+- `opencode`/`claude`/`codex` version, `opencode.json`/` .mcp.json`/`config.toml` valid, agents/skills on disk, `AGENTS.md`
+- `oh-my-openagent` (when OpenCode host), `mcp/dify-knowledge/dist/index.js` built, `DIFY_*` → `GET /datasets?limit=1` 200
+- Tracker `npx` resolvable + `REDMINE_*`/ `JIRA_*` → connectivity 200
+- Host sync: `.claude/skills`, `.agents/skills`, `.mcp.json`, `.codex/config.toml`
 
 Exit `0` pass (warnings allowed), `1` fail.
 
-## Workflow
+## Workflow — tracker-agnostic
 
-Per `AGENTS.md`, every task:
+Per `AGENTS.md`:
 
 ```
-Redmine / prompt → task-analysis → codebase-exploration
+Tracker issue (Redmine/Jira) / prompt → task-analysis → codebase-exploration
   → internal-knowledge (if needed) → implementation
   → testing-debugging → code-review
 ```
 
-Example in OpenCode TUI:
+Example (any host, either tracker):
 
 ```
-Work on Redmine #1234
-@researcher explore this for #1234
+Work on Jira PROJ-123  # or Redmine #1234
+@researcher explore this for PROJ-123
 search_knowledge query="payment settlement idempotency" top_k=5
 # implement → test → review
 @reviewer review the changes
@@ -199,112 +225,76 @@ Full workflow: `docs/workflow.md`
 
 ## Working on an App Repo
 
-This repo stays as the **harness** — not the app. Two reuse patterns:
+Two reuse patterns:
 
-**A. Global install (recommended for sibling clones):**
-
-```bash
-# Inside ai-engineering:
-./scripts/install-global.sh        # Linux/macOS/WSL
-# or
-.\scripts\install-global.ps1       # Windows
-# Copies opencode.json + .opencode/agents/skills/commands + AGENTS.md to ~/.config/opencode (or %APPDATA%\opencode)
-
-# Then any app repo sibling works:
-git clone <app-repo> ../my-app
-cd ../my-app
-# Export creds from ai-engineering (or add to shell profile):
-set -a; source ../ai-engineering/.env; set +a   # bash
-# PowerShell: Get-Content ..\ai-engineering\.env | ForEach-Object { if($_ -match '^([^#=]+)=(.*)$'){ Set-Item -Path "env:$($Matches[1])" -Value $Matches[2] } }
-opencode
-# In TUI: Tab switches developer/researcher/reviewer; skill({ name: "task-analysis" })
-```
-
-Verify global wiring: `opencode debug config`
-
-**B. Keep app inside harness (simplest, no global step):**
+**A. Global install (sibling clones, recommended for OpenCode):**
 
 ```bash
-git clone <app-repo> ./workspace/my-app   # inside ai-engineering
-cd workspace/my-app
-opencode   # .opencode ancestors not auto-discovered across git boundaries — prefer A or copy config
+./scripts/install-global.sh   # or .ps1 → ~/.config/opencode
+# Then:
+git clone <app-repo> ../my-app && cd ../my-app
+set -a; source ../ai-engineering/.env; set +a  # or shell profile
+opencode   # or claude/codex if host=all
 ```
 
-**C. Per-project copy:**
+**B. Per-project / synced:**
 
 ```bash
-cp ../ai-engineering/opencode.json ./opencode.json
-cp -r ../ai-engineering/.opencode ./.opencode
-cp ../ai-engineering/AGENTS.md ./AGENTS.md
-# Edit for app-specific overrides, commit to app repo if desired
-opencode
+./scripts/sync-hosts.sh --host=all
+cp .mcp.json ../my-app/.mcp.json           # for Claude
+cp -r .agents ../my-app/.agents            # for Codex
+cp opencode.json ../my-app/opencode.json   # for OpenCode (or install-global)
 ```
 
-`AGENTS.md` travels with the harness globally; per-app rules live in `my-app/AGENTS.md` merged via `instructions: ["AGENTS.md"]` + OpenCode's instruction discovery.
+`AGENTS.md` is universal; per-app overrides live in `my-app/AGENTS.md`.
 
 ## Self-hosted Dify
 
-See `docker/dify/README.md` — vendor upstream `https://github.com/langgenius/dify` compose; this repo's `docker/dify/` is a placeholder with instructions (avoids shipping a stale heavy compose).
+See `docker/dify/README.md` — vendor upstream `https://github.com/langgenius/dify` compose; `docker/dify/` is placeholder.
 
 ## Docs
 
-- `docs/architecture.md` — component details + decisions
-- `docs/setup.md` — prerequisites + step-by-step install
-- `docs/workflow.md` — mandatory task flow + examples
+- `docs/architecture.md` — host/tracker matrix + decisions
+- `docs/setup.md` — host/tracker flags + per-host steps
+- `docs/workflow.md` — tracker-agnostic task flow
 - `docs/security.md` — secrets, scopes, read-only, policies
-- `docs/troubleshooting.md` — `setup/check` failures, OpenCode/OmO/Dify/Redmine fixes
-- `config/mcp/README.md` — MCP wiring rationale
-- `mcp/dify-knowledge/README.md` — adapter build/test
+- `docs/troubleshooting.md` — host/tracker failures
+- `config/hosts/README.md` + `config/hosts/<host>/README.md`
+- `config/trackers/redmine/README.md` + `config/trackers/jira/README.md`
+- `config/mcp/README.md` — MCP wiring
+- `mcp/dify-knowledge/README.md`
 
 ## Repository Structure
 
 ```
 ai-engineering/
-├── opencode.json              # project config (agents, MCP, plugin)
-├── AGENTS.md                  # global rules (loaded as instructions)
-├── .env.example               # template
-├── .opencode/
-│   ├── agents/                # developer / researcher / reviewer
-│   ├── skills/                # 6 SKILL.md
-│   └── commands/              # health, research
-├── mcp/
-│   └── dify-knowledge/        # thin adapter (src → dist/index.js)
+├── opencode.json              # OpenCode host (agents, MCP for dify+redmine+jira)
+├── .mcp.json                  # (generated) Claude host
+├── .codex/config.toml         # (generated) Codex host
+├── AGENTS.md                  # universal rules
+├── .env.example               # REDMINE_* + JIRA_* (pick one)
+├── .opencode/                 # source of truth (agents/skills/commands)
+├── .claude/                   # (generated) Claude
+├── .agents/                   # (generated) Codex/universal
+├── mcp/dify-knowledge/        # thin adapter
 ├── config/
-│   ├── opencode/              # example JSONs
-│   └── mcp/                   # redmine/dify snippets
-├── setup/
-│   ├── install.sh / .ps1      # unified entry point
-│   └── check.sh / .ps1        # validation
-├── scripts/
-│   ├── install-opencode.*     # opencode alone
-│   ├── install-omo.*          # oh-my-openagent alone
-│   ├── install-mcp.*          # build dify + prime redmine npx
-│   ├── install-global.*       # copy harness to ~/.config/opencode for sibling reuse
-│   ├── configure.*            # interactive .env writer
-│   └── health-check.*         # alias to setup/check
-├── docker/
-│   └── dify/                  # self-host placeholder
+│   ├── hosts/                 # per-host templates + README
+│   ├── trackers/              # per-tracker docs
+│   ├── opencode/              # opencode examples
+│   └── mcp/                   # redmine/jira/dify snippets
+├── setup/                     # install.sh/ps1 --host/--tracker, check.sh/ps1
+├── scripts/                   # install-*, sync-hosts.*, configure.*, install-global.*
+├── docker/dify/               # self-host placeholder
 └── docs/
-    ├── architecture.md
-    ├── setup.md
-    ├── workflow.md
-    ├── security.md
-    └── troubleshooting.md
 ```
 
 ## Verification (What Was Checked)
 
-- OpenCode config schema & locations: https://opencode.ai/docs/config, https://opencode.ai/config.json
-- MCP servers schema: https://opencode.ai/docs/mcp-servers (`type: local|remote`, `command`, `environment`, `{env:VAR}`)
-- Agents: https://opencode.ai/docs/agents (markdown `---description/mode/permission---` + `opencode.json` `agent{}`)
-- Skills: https://opencode.ai/docs/skills (`.opencode/skills/<name>/SKILL.md`, frontmatter `name/description`)
-- Rules: https://opencode.ai/docs/rules (`AGENTS.md` + `instructions: ["AGENTS.md"]`)
-- Oh My OpenAgent: `oh-my-openagent` (dual `oh-my-opencode`), `bunx oh-my-openagent install`, `plugin: ["oh-my-openagent"]`, https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/refs/heads/dev/docs/guide/installation.md
-- Dify Knowledge API: `GET /datasets`, `POST /datasets/{id}/retrieve`, `GET /datasets/{id}/documents/{doc_id}`, `Authorization: Bearer {API_KEY}`, https://docs.dify.ai
-- MCP SDK: `@modelcontextprotocol/sdk` + `zod`, `McpServer` + `StdioServerTransport`
-- Redmine MCP: `@onozaty/redmine-mcp-server` (comprehensive API, `REDMINE_MCP_READ_ONLY`), https://github.com/onozaty/redmine-mcp-server
-- No brain-dead local `git` MCP — `bash` + `git` directly per spec.
+- OpenCode `opencode.json` + `opencode.ai/config.json`, Claude `.mcp.json` (`mcpServers`), Codex `config.toml` (`[mcp_servers]`), Agents `---description/mode/permission---`, Skills `SKILL.md` (`name/description`), Rules `AGENTS.md`
+- Oh My OpenAgent `bunx oh-my-openagent install`, Dify `GET /datasets` / `POST /retrieve`, MCP SDK `@modelcontextprotocol/sdk` + `zod`
+- Redmine `@onozaty/redmine-mcp-server`, Jira `@ahmetbarut/jira-mcp-server` (+ alternatives `@atlassian-dc-mcp/jira`, Rovo, `mcp-jira-cloud-server`), no local Git MCP
+- Host-agnostic `scripts/sync-hosts` + `--host`/`--tracker` flags + `setup/check` pluggable validation
 
 ## License
 
-MIT — see `LICENSE` (add if distributing).
+MIT

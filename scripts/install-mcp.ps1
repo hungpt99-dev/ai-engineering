@@ -11,7 +11,9 @@ if (-not (Test-Path $nm)) { Push-Location (Join-Path $Root "mcp\dify-knowledge")
 Push-Location (Join-Path $Root "mcp\dify-knowledge"); & npm run build; Pop-Location
 Write-Host "[ok] Dify MCP built: mcp\dify-knowledge\dist\index.js" -ForegroundColor Green
 
-Write-Host "[info] Verifying Redmine MCP package (npx cache)…" -ForegroundColor Cyan
-try { & npx --yes @onozaty/redmine-mcp-server --help 2>&1 | Out-Null; Write-Host "[ok] Redmine MCP package resolvable" -ForegroundColor Green } catch { Write-Host "[warn] Redmine MCP not yet cached — will be fetched on first OpenCode run via npx" -ForegroundColor Yellow }
+Write-Host "[info] Verifying tracker MCP packages (npx cache)…" -ForegroundColor Cyan
+foreach ($pkg in @("@onozaty/redmine-mcp-server","@ahmetbarut/jira-mcp-server")) {
+  try { & npx --yes $pkg --help 2>&1 | Out-Null; Write-Host "[ok] $pkg resolvable" -ForegroundColor Green } catch { Write-Host "[warn] $pkg not yet cached -- will be fetched on first run via npx" -ForegroundColor Yellow }
+}
 
-try { $j = Get-Content (Join-Path $Root "opencode.json") -Raw | ConvertFrom-Json; if ($j.mcp.'dify-knowledge' -and $j.mcp.redmine) { Write-Host "[ok] opencode.json mcp entries present" -ForegroundColor Green } else { Write-Host "[warn] opencode.json missing mcp entries" -ForegroundColor Yellow } } catch { Write-Host "[warn] opencode.json check failed: $_" -ForegroundColor Yellow }
+try { $j = Get-Content (Join-Path $Root "opencode.json") -Raw | ConvertFrom-Json; if ($j.mcp.'dify-knowledge' -and ($j.mcp.redmine -or $j.mcp.jira)) { Write-Host "[ok] opencode.json mcp entries present" -ForegroundColor Green } else { Write-Host "[warn] opencode.json missing mcp entries" -ForegroundColor Yellow } } catch { Write-Host "[warn] opencode.json check failed: $_" -ForegroundColor Yellow }
